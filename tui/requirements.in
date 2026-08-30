@@ -1,0 +1,3 @@
+# Python Textual fallback. Keep the top-level dependency exact; regenerate
+# requirements.txt with the command recorded in that file.
+textual==8.2.8

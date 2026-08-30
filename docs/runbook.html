@@ -1,0 +1,1100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>wezterm-ssh-manager 验收</title>
+<style>
+  :root {
+    --ground:    #f5f7f9;
+    --surface:   #ffffff;
+    --surface-2: #eaeef3;
+    --ink:       #101720;
+    --ink-2:     #4d5a67;
+    --ink-3:     #788593;
+    --rule:      #d7dde5;
+    --accent:    #0e6e7d;
+    --accent-2:  #d6ebef;
+    --pass:      #2d7a4d;
+    --pass-bg:   #dff0e5;
+    --warn:      #8f6410;
+    --warn-bg:   #f7ecd4;
+    --fail:      #a83c33;
+    --fail-bg:   #f7e0dd;
+    --term-bg:   #101820;
+    --term-ink:  #dbe4ec;
+    --term-dim:  #7d8b99;
+    --term-rule: #26313d;
+
+    --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Mono", Consolas,
+      "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:    #0d1219;
+      --surface:   #141b23;
+      --surface-2: #1b232d;
+      --ink:       #e4ebf2;
+      --ink-2:     #9aa7b5;
+      --ink-3:     #74818f;
+      --rule:      #27313d;
+      --accent:    #58b6c6;
+      --accent-2:  #10303a;
+      --pass:      #63bb85;
+      --pass-bg:   #12301f;
+      --warn:      #d6a750;
+      --warn-bg:   #332714;
+      --fail:      #e2796a;
+      --fail-bg:   #351c19;
+      --term-bg:   #070b10;
+      --term-ink:  #d3dde7;
+      --term-dim:  #6c7987;
+      --term-rule: #1d2731;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:    #0d1219;
+    --surface:   #141b23;
+    --surface-2: #1b232d;
+    --ink:       #e4ebf2;
+    --ink-2:     #9aa7b5;
+    --ink-3:     #74818f;
+    --rule:      #27313d;
+    --accent:    #58b6c6;
+    --accent-2:  #10303a;
+    --pass:      #63bb85;
+    --pass-bg:   #12301f;
+    --warn:      #d6a750;
+    --warn-bg:   #332714;
+    --fail:      #e2796a;
+    --fail-bg:   #351c19;
+    --term-bg:   #070b10;
+    --term-ink:  #d3dde7;
+    --term-dim:  #6c7987;
+    --term-rule: #1d2731;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.65;
+    margin: 0;
+    padding: 0 20px 96px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 940px; margin: 0 auto; }
+
+  /* ---------- masthead ---------- */
+
+  header.masthead {
+    padding: 56px 0 28px;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+
+  h1 {
+    font-size: clamp(30px, 5vw, 42px);
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+
+  .standfirst {
+    font-size: 17px;
+    color: var(--ink-2);
+    margin: 0;
+    max-width: 62ch;
+  }
+
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+    margin: 28px 0 0;
+  }
+  .fact {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 12px 14px;
+  }
+  .fact dt {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 0 4px;
+  }
+  .fact dd {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink);
+    word-break: break-all;
+  }
+
+  /* ---------- steps ---------- */
+
+  .step {
+    display: grid;
+    grid-template-columns: 74px 1fr;
+    gap: 0 22px;
+    padding: 38px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  @media (max-width: 720px) {
+    .step { grid-template-columns: 1fr; gap: 0; }
+    .step-n { margin-bottom: 6px; }
+  }
+
+  .step-n {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    padding-top: 6px;
+  }
+  .step-n .gate {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+    margin-top: 3px;
+  }
+
+  h2 {
+    font-size: 23px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+
+  h3 {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 26px 0 8px;
+  }
+
+  p { margin: 0 0 14px; max-width: 68ch; }
+  .step-body > p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.885em;
+    background: var(--surface-2);
+    padding: 1px 5px;
+    border-radius: 2px;
+    word-break: break-word;
+  }
+
+  /* ---------- terminal blocks ---------- */
+
+  .cmd {
+    background: var(--term-bg);
+    border: 1px solid var(--term-rule);
+    border-radius: 4px;
+    margin: 0 0 14px;
+    overflow: hidden;
+  }
+  .cmd-head {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--term-dim);
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--term-rule);
+  }
+  .cmd pre {
+    margin: 0;
+    padding: 13px 14px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--term-ink);
+  }
+  .cmd pre .c { color: var(--term-dim); }
+
+  /* ---------- expectation / outcome ---------- */
+
+  .out {
+    display: grid;
+    grid-template-columns: 68px 1fr;
+    gap: 12px;
+    align-items: start;
+    padding: 11px 14px;
+    border-left: 3px solid var(--rule);
+    background: var(--surface);
+    margin: 0 0 10px;
+    font-size: 15px;
+  }
+  .out .tag {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding-top: 4px;
+  }
+  .out p { margin: 0 0 8px; max-width: none; }
+  .out p:last-child { margin-bottom: 0; }
+  .out.ok   { border-left-color: var(--pass); background: var(--pass-bg); }
+  .out.ok   .tag { color: var(--pass); }
+  .out.bad  { border-left-color: var(--fail); background: var(--fail-bg); }
+  .out.bad  .tag { color: var(--fail); }
+  .out.note { border-left-color: var(--warn); background: var(--warn-bg); }
+  .out.note .tag { color: var(--warn); }
+  .out code { background: rgba(128,128,128,0.16); }
+  @media (max-width: 560px) {
+    .out { grid-template-columns: 1fr; gap: 4px; }
+    .out .tag { padding-top: 0; }
+  }
+
+  /* ---------- branch callout ---------- */
+
+  .branch {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+    margin: 0 0 14px;
+  }
+  .route {
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--accent);
+    background: var(--surface);
+    padding: 14px 16px;
+  }
+  .route h4 {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+  .route p { font-size: 14.5px; margin: 0 0 8px; }
+  .route p:last-child { margin: 0; }
+
+  /* ---------- tables ---------- */
+
+  .tablewrap { overflow-x: auto; margin: 0 0 14px; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 620px;
+    font-size: 14.5px;
+  }
+  th, td {
+    text-align: left;
+    vertical-align: top;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--rule);
+  }
+  th {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border-bottom: 1px solid var(--ink-3);
+    white-space: nowrap;
+  }
+  td code { font-size: 12.5px; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  /* ---------- checklist ---------- */
+
+  .checklist {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 6px 4px;
+    margin: 0 0 16px;
+  }
+  .check {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 10px;
+    align-items: start;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--rule);
+    cursor: pointer;
+  }
+  .checklist .check:last-child { border-bottom: none; }
+  .check input {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 17px;
+    height: 17px;
+    margin: 4px 0 0;
+    border: 1.5px solid var(--ink-3);
+    border-radius: 3px;
+    background: var(--surface);
+    cursor: pointer;
+    position: relative;
+    flex: none;
+  }
+  .check input:checked {
+    background: var(--pass);
+    border-color: var(--pass);
+  }
+  .check input:checked::after {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 1px;
+    width: 4px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(42deg);
+  }
+  .check input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .check-body { font-size: 15px; }
+  .check-body .where {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-3);
+    margin-top: 2px;
+  }
+  .check input:checked + .check-body { color: var(--ink-3); text-decoration: line-through; }
+  .check input:checked + .check-body .where { text-decoration: none; }
+
+  .progress {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 0 12px;
+  }
+  .progress b {
+    font-size: 21px;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .progress button {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    background: none;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 4px 9px;
+    cursor: pointer;
+  }
+  .progress button:hover { color: var(--ink); border-color: var(--ink-3); }
+  .progress button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- sections ---------- */
+
+  section.block { padding: 38px 0; border-bottom: 1px solid var(--rule); }
+  section.block > h2 { margin-bottom: 14px; }
+  section.block:last-of-type { border-bottom: none; }
+
+  .kicker {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 10px;
+  }
+
+  ul.plain { margin: 0 0 14px; padding-left: 20px; max-width: 68ch; }
+  ul.plain li { margin-bottom: 6px; }
+
+  footer {
+    padding: 32px 0 0;
+    font-size: 13.5px;
+    color: var(--ink-3);
+    font-family: var(--mono);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Historical Runbook · Windows</p>
+    <h1>wezterm-ssh-manager 历史更新与验收</h1>
+    <p class="standfirst">
+      这份手册的 Step 1–7 是算法过滤、凭据管理器和 Tabby 转换的历史回归流程；
+      Step 8 已补充 v1.0.0 的 OpenTUI/SFTP 实机验收。
+    </p>
+
+    <dl class="facts">
+      <div class="fact"><dt>验收范围</dt><dd>v1.0.0 公开发布基线</dd></div>
+      <div class="fact"><dt>公开安装源</dt><dd>https://github.com/stabey/wezterm-ssh-manager</dd></div>
+      <div class="fact"><dt>插件 checkout</dt><dd>%APPDATA%\wezterm\plugins\</dd></div>
+      <div class="fact"><dt>日志</dt><dd>%USERPROFILE%\.local\share\wezterm\</dd></div>
+    </dl>
+  </header>
+
+  <section class="block">
+    <p class="kicker">先看这里</p>
+    <h2>我在 macOS 上验不了的三件事</h2>
+    <p>
+      下面的步骤里大部分我已经在本机的 wezterm 上跑通了。但有三块只能靠你这边确认，
+      验收时重点看这几步：
+    </p>
+    <ul class="plain">
+      <li><strong>credman.ps1 从没被执行过</strong> —— 这台 Mac 没有 PowerShell。逻辑是照 keytar 源码写的，
+        但一行都没跑过。<strong>Step 5</strong> 就是专门验它的。</li>
+      <li><strong>真实的 Windows ssh.exe</strong> —— 算法过滤是拿 macOS 的 OpenSSH 10.3 验的，
+        你那边版本不同，能留下的算法会不一样（这是设计如此）。<strong>Step 4</strong> 验它。</li>
+      <li><strong>Windows 上的 OpenTUI 原生产物</strong> —— macOS 已完成真实 PTY、SSH Manager
+        和本机 sshd/SFTP 验证；Windows 仍需在 Windows runner 或实机验证 resize、中文宽度和键鼠。
+        <strong>Step 8</strong> 验它。</li>
+    </ul>
+  </section>
+
+  <section class="step">
+    <div class="step-n">00<span class="gate">分支点</span></div>
+    <div class="step-body">
+      <h2>确认你是哪种安装方式</h2>
+      <p>
+        推荐直接从公开仓库安装。<code>wezterm.plugin.require</code> 会把仓库 clone 到 wezterm
+        自己的插件目录并从该副本加载；不需要 GitHub 登录或在 URL 中附加凭据。
+        按 <code>Ctrl+Shift+L</code> 打开 debug overlay：
+      </p>
+
+      <div class="cmd">
+        <div class="cmd-head">debug overlay</div>
+        <pre>wezterm.plugin.list()</pre>
+      </div>
+
+      <div class="branch">
+        <div class="route">
+          <h4>路线 A · 公开 URL（推荐）</h4>
+          <p>你用的是 <code>plugin.require</code>。列表里应该有
+            <code>https://github.com/stabey/wezterm-ssh-manager</code>。</p>
+          <p>更新运行 <code>update_all()</code>，然后重新加载配置。</p>
+        </div>
+        <div class="route">
+          <h4>路线 B · 本地开发</h4>
+          <p>你用的是 <code>package.path</code> + <code>require</code>，直接从自己的开发 checkout 加载。</p>
+          <p>在该 checkout 运行 <code>git pull</code> 后按 <code>Ctrl+Shift+R</code>，跳过 Step 2。</p>
+        </div>
+      </div>
+
+      <div class="out note">
+        <span class="tag">注意</span>
+        <p>如果这一步就报 <code>could not find repository at ...plugins\xxx</code>，
+          说明插件目录里混进了一个非 git 目录（多半是某次失败 clone 留下的）。
+          <code>wezterm.plugin.list()</code> 会对每个子目录 <code>Repository::open</code>，
+          一个失败就整体报错。把那个目录删掉再来。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="step-n">01</div>
+    <div class="step-body">
+      <h2>配置公开安装源</h2>
+
+      <div class="cmd">
+        <div class="cmd-head">wezterm.lua</div>
+<pre>local sshmgr = wezterm.plugin.require(
+  'https://github.com/stabey/wezterm-ssh-manager'
+)
+sshmgr.apply_to_config(config)</pre>
+      </div>
+
+      <div class="out ok">
+        <span class="tag">期望</span>
+        <p>重载配置后，<code>wezterm.plugin.list()</code> 显示上述公开仓库 URL。</p>
+      </div>
+
+      <div class="out bad">
+        <span class="tag">失败</span>
+        <p>拉不下来时先确认可以访问 GitHub，并检查 URL 是否完整。公开仓库不需要认证，
+          不要在 URL 中嵌入用户名、访问令牌或其他凭据。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="step-n">02<span class="gate">路线 A</span></div>
+    <div class="step-body">
+      <h2>让 wezterm 同步到副本</h2>
+      <p>debug overlay 里跑：</p>
+
+      <div class="cmd">
+        <div class="cmd-head">debug overlay</div>
+<pre>wezterm.plugin.update_all(); wezterm.reload_configuration()</pre>
+      </div>
+
+      <div class="out note">
+        <span class="tag">注意</span>
+        <p><code>update_all()</code> <strong>把错误吞进日志，不会抛给你</strong>
+          （源码里是 <code>Err =&gt; log::error!</code>），所以它"没反应"和"成功了"看起来一样。
+          真正的确认在下一步。</p>
+      </div>
+
+      <div class="out bad">
+        <span class="tag">失败</span>
+        <p>Step 3 验不过的话，最省事的办法是直接删掉
+          <code>%APPDATA%\wezterm\plugins\</code> 下由 <code>wezterm.plugin.list()</code>
+          显示的对应插件目录，重启 wezterm 会重新 clone。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="step-n">03<span class="gate">硬门槛</span></div>
+    <div class="step-body">
+      <h2>确认新代码真的生效了</h2>
+      <p>
+        <code>panel</code> 是这次新增的入口，旧版本没有。这一步不过，后面全部白做。
+      </p>
+
+      <div class="cmd">
+        <div class="cmd-head">debug overlay</div>
+<pre>wezterm.plugin.require(
+  'https://github.com/stabey/wezterm-ssh-manager'
+).panel</pre>
+      </div>
+
+      <div class="out ok">
+        <span class="tag">期望</span>
+        <p>打印一个 <code>function</code>。</p>
+      </div>
+
+      <div class="out bad">
+        <span class="tag">失败</span>
+        <p>打印 <code>nil</code> = 还在跑旧代码，回到 Step 2 或直接删 checkout 重来。</p>
+        <p>报 <code>remote authentication required but no callback set</code> =
+          仓库 URL 写错、指向了需要登录的地址，或留下了失败的 checkout。
+          改成上面的公开 URL；仍失败时删掉对应的插件 checkout，让 wezterm 重新 clone。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="step-n">04</div>
+    <div class="step-body">
+      <h2>验算法过滤</h2>
+      <p>
+        这是修 pane 闪退的那个。挑一个 Tabby 转过来、算法列表最长的 profile：
+      </p>
+
+      <div class="cmd">
+        <div class="cmd-head">debug overlay</div>
+<pre>wezterm.plugin.require(
+  'https://github.com/stabey/wezterm-ssh-manager'
+)
+  .command_for '你的profile名'</pre>
+      </div>
+
+      <div class="out ok">
+        <span class="tag">期望</span>
+        <p>输出的命令行里<strong>不再出现</strong> <code>arcfour</code>、<code>blowfish-cbc</code>、
+          <code>cast128-cbc</code>、不带 <code>@openssh.com</code> 的 <code>aes128-gcm</code>、
+          <code>hmac-ripemd160</code>、<code>ext-info-c</code>、<code>kex-strict-</code>。</p>
+        <p><code>3des-cbc</code>、<code>ssh-rsa</code>、<code>hmac-md5</code> 这些<strong>应该还在</strong> ——
+          它们是遗留但你的客户端支持，留着才连得上老设备。</p>
+      </div>
+
+      <h3>真正的证明</h3>
+      <p>把上面输出的命令复制到普通 pwsh 标签页，<code>ssh</code> 后面加 <code>-G</code>：</p>
+
+      <div class="cmd">
+        <div class="cmd-head">PowerShell</div>
+<pre>ssh -G -o Ciphers=... -o MACs=... 你的主机 &gt; $null
+$LASTEXITCODE</pre>
+      </div>
+
+      <div class="out ok">
+        <span class="tag">期望</span>
+        <p><code>0</code>。<code>-G</code> 只解析配置不连网，所以这是纯粹的参数合法性检查。</p>
+      </div>
+
+      <div class="out bad">
+        <span class="tag">失败</span>
+        <p><code>255</code> = 还有名字没被过滤掉。日志里搜
+          <code>does not support</code> 看它到底剔了什么、剩了什么，把结果发我。</p>
+      </div>
+
+      <div class="out note">
+        <span class="tag">附带</span>
+        <p>日志里应该有若干行
+          <code>[ssh-manager] &lt;profile&gt;: ssh.exe does not support ...; dropped from Ciphers</code>。
+          没有任何这种行，而 Step 3 又过了，说明这些 profile 的算法列表本来就是干净的 —— 也正常。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="step-n">05<span class="gate">未验证</span></div>
+    <div class="step-body">
+      <h2>验凭据管理器取密码</h2>
+      <p>
+        <strong>这段代码一次都没跑过</strong>，重点看。先列出凭据管理器里有什么
+        —— 只打印 target 和用户名，不打印密码：
+      </p>
+
+      <p>如果还没有源码 checkout，先从公开仓库 clone 一份供下面的辅助脚本使用：</p>
+
+      <div class="cmd">
+        <div class="cmd-head">PowerShell</div>
+<pre>git clone https://github.com/stabey/wezterm-ssh-manager `
+  "$env:USERPROFILE\src\wezterm-ssh-manager"</pre>
+      </div>
+
+      <div class="cmd">
+        <div class="cmd-head">PowerShell</div>
+<pre>powershell -NoProfile -ExecutionPolicy Bypass `
+  -File "$env:USERPROFILE\src\wezterm-ssh-manager\tools\credman.ps1" -List</pre>
+      </div>
+
+      <div class="out ok">
+        <span class="tag">期望</span>
+        <p>一堆 <code>ssh@主机</code> 或 <code>ssh@主机:端口</code> 开头的 target，
+          <code>User</code> 列是你的登录名。数量应该和 Tabby 里配了密码的 profile 数对得上。</p>
+      </div>
+
+      <div class="out bad">
+        <span class="tag">空的</span>
+        <p>报 <code>no credentials match 'ssh@*'</code> = 你在 Tabby 里开了 Vault。
+          密码是 AES 加密存在 <code>config.yaml</code> 的 <code>vault.contents</code> 里，
+          读不出来。<strong>先去 Tabby 里关掉 Vault</strong>（它会把 secret 写回凭据管理器），
+          再回到这一步。</p>
+      </div>
+
+      <div class="out bad">
+        <span class="tag">报错</span>
+        <p><code>Add-Type</code> 或 <code>CredRead</code> 相关的报错 = 我写的 P/Invoke 有问题。
+          把完整报错发我，这是我改代码而不是你改环境。</p>
+      </div>
+
+      <h3>读一条真的</h3>
+
+      <div class="cmd">
+        <div class="cmd-head">PowerShell</div>
+<pre>powershell -NoProfile -ExecutionPolicy Bypass `
+  -File "$env:USERPROFILE\src\wezterm-ssh-manager\tools\credman.ps1" `
+  -Target 'ssh@某主机:22/某用户'</pre>
+      </div>
+
+      <div class="out ok">
+        <span class="tag">期望</span>
+        <p>原样打印出密码，<strong>没有结尾换行</strong>，和你在 Tabby 里存的一致。</p>
+      </div>
+
+      <div class="out bad">
+        <span class="tag">乱码</span>
+        <p>出现方块字或乱码 = 编码判断错了。keytar 存的是密码的 UTF-8 原始字节，
+          不是 Windows 惯例的 UTF-16LE，脚本按 UTF-8 解并靠交替 NUL 字节识别 UTF-16。
+          乱码说明这个判断在你的数据上不成立，告诉我。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="step-n">06<span class="gate">破坏性</span></div>
+    <div class="step-body">
+      <h2>重新跑 Tabby 转换</h2>
+
+      <div class="out note">
+        <span class="tag">先备份</span>
+        <p>转换<strong>覆盖整个文件</strong>，是从 Tabby 的 <code>config.yaml</code> 重新生成的。
+          你在面板里加过、但 Tabby 里没有的 profile 会消失。
+          Step 5 没过就先别做这一步 —— 没有密码钩子的话转了也是白转。</p>
+      </div>
+
+      <div class="cmd">
+        <div class="cmd-head">PowerShell</div>
+<pre>Copy-Item C:\Users\你\.config\wezterm\ssh_profiles.lua `
+          C:\Users\你\.config\wezterm\ssh_profiles.lua.bak2</pre>
+      </div>
+
+      <div class="cmd">
+        <div class="cmd-head">debug overlay</div>
+<pre>wezterm.plugin.require(
+  'https://github.com/stabey/wezterm-ssh-manager'
+).export_tabby {
+  to = 'C:/Users/你/.config/wezterm/ssh_profiles.lua',
+  force = true,
+}</pre>
+      </div>
+
+      <div class="out ok">
+        <span class="tag">期望</span>
+        <p>返回 <code>true</code> 和一行统计，形如
+          <code>N profile(s) -&gt; C:/... (M skipped, P password hook(s), R regex(es) need review)</code>。</p>
+        <p><code>password hook(s)</code> 的数量应该和 Step 5 <code>-List</code> 出来的条数对得上。</p>
+      </div>
+
+      <div class="out note">
+        <span class="tag">路径</span>
+        <p><code>to</code> 一定要写全。不写的话默认是
+          <code>wezterm.config_dir</code> —— 如果你的配置是
+          <code>%USERPROFILE%\.wezterm.lua</code>，那 config_dir 就是
+          <code>%USERPROFILE%</code>，文件会掉在用户根目录。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="step-n">07</div>
+    <div class="step-body">
+      <h2>检查生成的文件</h2>
+      <p>先看文件头的迁移报告，再用 grep 确认没有漏网的：</p>
+
+      <div class="cmd">
+        <div class="cmd-head">PowerShell</div>
+<pre><span class="c"># 应该一条都搜不到</span>
+Select-String -Path C:\Users\你\.config\wezterm\ssh_profiles.lua `
+  -Pattern 'arcfour|blowfish-cbc|cast128-cbc|ext-info-|kex-strict-|hmac-ripemd160'
+
+<span class="c"># 密码钩子的数量</span>
+(Select-String -Path C:\Users\你\.config\wezterm\ssh_profiles.lua `
+  -Pattern 'password_cmd').Count
+
+<span class="c"># 脚本被拷到同目录了吗</span>
+Test-Path C:\Users\你\.config\wezterm\credman.ps1</pre>
+      </div>
+
+      <div class="out ok">
+        <span class="tag">期望</span>
+        <p>第一条<strong>无输出</strong>；第二条等于密码 profile 数；第三条 <code>True</code>。</p>
+        <p>文件头应该有 <code>ALGORITHMS DROPPED</code> 和 <code>PASSWORDS</code> 两段，
+          <code>PASSWORDS</code> 里每行是 <code>&lt;profile 名&gt;  ssh@主机:端口/用户名</code>。</p>
+      </div>
+
+      <div class="out note">
+        <span class="tag">检查</span>
+        <p><code>PASSWORDS</code> 段里的 target <strong>要带端口</strong>（没写就
+          <code>:22</code>）。Tabby 的 yaml 常常省略默认端口，但凭据管理器里的条目
+          是带端口的。转换器按「没写 = 22」拼 target，再删掉冗余的
+          <code>port = 22</code>。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="step-n">08<span class="gate">未验证</span></div>
+    <div class="step-body">
+      <h2>真实连接 + SSH Manager TUI</h2>
+
+      <h3>密码认证的服务器</h3>
+      <p><code>Ctrl+Shift+S</code> 打开 <code>SSH Manager</code> tab，左边选分组，右边回车连一个
+        <code>auth: password</code> 的。Manager 应留着，SSH 在新 tab。</p>
+
+      <div class="out ok">
+        <span class="tag">期望</span>
+        <p>自动填密码登录，<strong>不弹密码提示</strong>。日志里能看到
+          <code>[ssh-manager] &lt;名字&gt;: sent &lt;hidden&gt;</code> ——
+          密码永远不会明文进日志。</p>
+      </div>
+
+      <div class="out bad">
+        <span class="tag">卡在密码提示</span>
+        <p>说明 <code>password_cmd</code> 没取到值。手动跑一遍 Step 5 的 <code>-Target</code> 命令，
+          target 用文件头 <code>PASSWORDS</code> 段里那个，看是命令本身的问题还是 target 对不上。</p>
+      </div>
+
+      <div class="out bad">
+        <span class="tag">pane 一闪就关</span>
+        <p>算法还有问题，回 Step 4。</p>
+      </div>
+
+      <h3>跳板机的服务器</h3>
+      <p>挑一个配了 <code>jumpHost</code> 的，确认 <code>-J</code> 那一跳能过。</p>
+
+      <h3>TUI 管理</h3>
+      <p>还在 Manager tab 里走一遍：<code>n</code> 新建 → <code>e</code> 改几个常用字段 → <code>d</code> 删掉。
+        再按一次 <code>Ctrl+Shift+S</code> 应切回同一个 tab，不要再开一个。</p>
+      <p>默认后端是 OpenTUI。仓库里有本平台的 <code>tui-opentui/dist/sshmgr-tui-*</code>
+        时优先使用单文件程序；否则尝试 Bun 源码，最后才回退 Python Textual。OpenTUI 的编辑表单
+        目前只显示名称、分组、目标、认证和跳板机等常用字段，未显示的高级字段会原样保留。</p>
+
+      <h3>SFTP 双栏</h3>
+      <p>在 Manager 选中主机后按 <code>s</code>，确认左侧本地目录、右侧远端目录能读取。
+        走一遍新建目录、普通文件上传、改名、下载、删除；再用 <code>c</code> 取消一次进行中的传输。
+        密码 profile 会在新建 SFTP 会话时重新询问，私钥、Agent 和单跳跳板机应自动映射。</p>
+
+      <div class="out ok">
+        <span class="tag">期望</span>
+        <p>保存后列表刷新，不用重启 TUI。
+          <code>ssh_profiles.lua</code> 的<strong>文件头注释原样保留</strong>。
+          snapshot JSON 里没有明文 <code>password</code>。</p>
+      </div>
+
+      <div class="out note">
+        <span class="tag">前提</span>
+        <p>TUI 默认编辑
+          <code>&lt;wezterm 配置目录&gt;/ssh_profiles.lua</code>。
+          想让它编辑别的文件，在 <code>apply_to_config</code> 里加
+          <code>profile_store = 'C:/.../ssh_profiles.lua'</code>。
+          改完没生效，先查这个。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <p class="kicker">验收清单</p>
+    <h2>逐条勾掉</h2>
+    <p>勾选状态存在这个浏览器里，关掉页面再打开还在。</p>
+
+    <div class="progress">
+      <b><span id="done">0</span>/<span id="total">0</span></b>
+      <span>项通过</span>
+      <button type="button" id="reset">清空</button>
+    </div>
+
+    <div class="checklist" id="list">
+      <label class="check"><input type="checkbox" data-k="a1">
+        <span class="check-body">插件列表显示公开仓库 URL，且待验收版本已加载
+          <span class="where">Step 1</span></span></label>
+
+      <label class="check"><input type="checkbox" data-k="a2">
+        <span class="check-body"><code>.panel</code> 返回 <code>function</code>，TUI 模块能加载
+          <span class="where">Step 3 · 硬门槛</span></span></label>
+
+      <label class="check"><input type="checkbox" data-k="a3">
+        <span class="check-body">生成的命令行里没有 <code>arcfour</code> / <code>ext-info-</code> 一类
+          <span class="where">Step 4</span></span></label>
+
+      <label class="check"><input type="checkbox" data-k="a4">
+        <span class="check-body"><code>ssh -G</code> 退出码 <code>0</code>
+          <span class="where">Step 4 · 真正的证明</span></span></label>
+
+      <label class="check"><input type="checkbox" data-k="a5">
+        <span class="check-body"><code>3des-cbc</code> / <code>ssh-rsa</code> 这类遗留算法仍在，没被误删
+          <span class="where">Step 4</span></span></label>
+
+      <label class="check"><input type="checkbox" data-k="a6">
+        <span class="check-body"><code>credman.ps1 -List</code> 列出了凭据
+          <span class="where">Step 5 · 未验证代码</span></span></label>
+
+      <label class="check"><input type="checkbox" data-k="a7">
+        <span class="check-body"><code>-Target</code> 读出的密码正确、无乱码
+          <span class="where">Step 5 · 未验证代码</span></span></label>
+
+      <label class="check"><input type="checkbox" data-k="a8">
+        <span class="check-body">转换返回 <code>true</code>，password hook 数量对得上
+          <span class="where">Step 6</span></span></label>
+
+      <label class="check"><input type="checkbox" data-k="a9">
+        <span class="check-body">grep 搜不到任何非法算法名
+          <span class="where">Step 7</span></span></label>
+
+      <label class="check"><input type="checkbox" data-k="a10">
+        <span class="check-body">文件头 <code>PASSWORDS</code> 段的 target 带端口
+          <span class="where">Step 7</span></span></label>
+
+      <label class="check"><input type="checkbox" data-k="a11">
+        <span class="check-body">密码认证的服务器自动登录成功
+          <span class="where">Step 8</span></span></label>
+
+      <label class="check"><input type="checkbox" data-k="a12">
+        <span class="check-body">跳板机的服务器能连上
+          <span class="where">Step 8</span></span></label>
+
+      <label class="check"><input type="checkbox" data-k="a13">
+        <span class="check-body">TUI 能新建 / 编辑 / 删除，Manager tab 复用，文件头保留
+          <span class="where">Step 8 · 未验证交互</span></span></label>
+
+      <label class="check"><input type="checkbox" data-k="a14">
+        <span class="check-body">OpenTUI SFTP 能浏览、上传、下载、改名和删除普通文件
+          <span class="where">Step 8 · Windows 实机</span></span></label>
+    </div>
+  </section>
+
+  <section class="block">
+    <p class="kicker">出问题时</p>
+    <h2>故障速查</h2>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>现象</th><th>原因</th><th>处理</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Ctrl+Shift+S 提示 OpenTUI、Bun 和 Textual 都不可用</td>
+            <td>没有本平台编译产物，也找不到 Bun；Python 回退同样不可用</td>
+            <td>在 <code>tui-opentui</code> 运行 <code>bun install &amp;&amp; bun run build</code>；或安装 Textual 回退</td>
+          </tr>
+          <tr>
+            <td>每次快捷键都新开一个 Manager tab</td>
+            <td>标题对不上，或 OpenTUI/Bun/Python 进程已经退出</td>
+            <td>关掉多余 tab 再按一次；看 tab 标题是不是 <code>SSH Manager</code></td>
+          </tr>
+          <tr>
+            <td>TUI 里回车没反应</td>
+            <td>一次性请求引用的 OSC 唤醒没有到 Lua，或请求会话已失效</td>
+            <td>看 wezterm 日志有没有 <code>bad sshmgr user-var</code>；确认用的是插件 spawn 的 tab</td>
+          </tr>
+          <tr>
+            <td>pane 一闪就关</td>
+            <td>算法列表里有 ssh 不认识的名字，OpenSSH 直接 exit 255</td>
+            <td>Step 4；确认 Step 3 过了再说</td>
+          </tr>
+          <tr>
+            <td><code>update_all()</code> 像没反应</td>
+            <td>它把错误吞进日志，不抛给 lua</td>
+            <td>看日志；或按 <code>plugin.list()</code> 显示的路径删掉对应 checkout 后重新 clone</td>
+          </tr>
+          <tr>
+            <td><code>could not find repository at ...plugins\xxx</code></td>
+            <td>插件目录里有非 git 目录，<code>list_plugins()</code> 整体失败</td>
+            <td>删掉那个目录</td>
+          </tr>
+          <tr>
+            <td><code>remote authentication required but no callback set</code></td>
+            <td>仓库 URL 错误、指向需要登录的地址，或失败 checkout 残留</td>
+            <td>改用公开仓库 URL 并删除对应的失败 checkout，再重启 wezterm</td>
+          </tr>
+          <tr>
+            <td><code>credman.ps1 -List</code> 空</td>
+            <td>Tabby 开了 Vault，密码不在凭据管理器</td>
+            <td>Tabby 里关掉 Vault，再重跑 Step 5 和 6</td>
+          </tr>
+          <tr>
+            <td>密码读出来是乱码</td>
+            <td>UTF-8 / UTF-16 判断失效</td>
+            <td>把 target 和现象发我，这是代码要改</td>
+          </tr>
+          <tr>
+            <td>面板改完没生效</td>
+            <td>编辑的不是你实际加载的那个文件</td>
+            <td>检查 <code>profile_store</code> 指向哪里</td>
+          </tr>
+          <tr>
+            <td>连一半断（不是闪退）</td>
+            <td>参数合法但服务端不接受</td>
+            <td><code>command_for</code> 拿到命令，在普通 pwsh 里手跑，看真实报错</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="block">
+    <p class="kicker">回滚</p>
+    <h2>退回去</h2>
+    <p>三样东西可以独立回滚，互不影响：</p>
+
+    <div class="cmd">
+      <div class="cmd-head">PowerShell</div>
+<pre><span class="c"># 1. profile 文件 —— 用备份</span>
+Copy-Item C:\Users\你\.config\wezterm\ssh_profiles.lua.bak `
+          C:\Users\你\.config\wezterm\ssh_profiles.lua
+
+<span class="c"># 2. 本地开发 checkout —— 回到一个已发布版本（仅路线 B）</span>
+git -C "$env:USERPROFILE\src\wezterm-ssh-manager" fetch --tags
+git -C "$env:USERPROFILE\src\wezterm-ssh-manager" checkout v1.0.0
+
+<span class="c"># 3. 插件 checkout 彻底重置</span>
+<span class="c"># 先用 wezterm.plugin.list() 确认精确路径，再删除对应目录；重启后会重新 clone。</span></pre>
+    </div>
+
+    <p>路线 B 执行第 2 项后按 <code>Ctrl+Shift+R</code> 重新加载本地代码。
+      路线 A 要恢复公开仓库当前版本时执行第 3 项，重启 wezterm 后会自动重新 clone。</p>
+  </section>
+
+  <footer>
+    wezterm-ssh-manager · v1.0.0 · github.com/stabey/wezterm-ssh-manager
+  </footer>
+
+</div>
+
+<script>
+  (function () {
+    var KEY = 'wsm-acceptance-v1';
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('#list input[type=checkbox]'));
+    var doneEl = document.getElementById('done');
+    var totalEl = document.getElementById('total');
+    totalEl.textContent = boxes.length;
+
+    function read() {
+      try {
+        var raw = localStorage.getItem(KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function write(state) {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(state));
+      } catch (e) { /* blocked storage: checklist state will not persist */ }
+    }
+
+    function paint() {
+      var n = boxes.filter(function (b) { return b.checked; }).length;
+      doneEl.textContent = n;
+    }
+
+    var state = read();
+    boxes.forEach(function (b) {
+      if (state[b.dataset.k]) { b.checked = true; }
+      b.addEventListener('change', function () {
+        var s = read();
+        if (b.checked) { s[b.dataset.k] = 1; } else { delete s[b.dataset.k]; }
+        write(s);
+        paint();
+      });
+    });
+
+    document.getElementById('reset').addEventListener('click', function () {
+      boxes.forEach(function (b) { b.checked = false; });
+      write({});
+      paint();
+    });
+
+    paint();
+  })();
+</script>
+
+</body>
+</html>

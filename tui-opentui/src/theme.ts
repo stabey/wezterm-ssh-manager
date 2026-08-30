@@ -1,0 +1,16 @@
+export const theme = {
+  bg: "#11111b",
+  surface: "#181825",
+  elevated: "#1e1e2e",
+  overlay: "#313244",
+  border: "#45475a",
+  muted: "#7f849c",
+  text: "#cdd6f4",
+  subtext: "#a6adc8",
+  blue: "#89b4fa",
+  lavender: "#b4befe",
+  green: "#a6e3a1",
+  yellow: "#f9e2af",
+  red: "#f38ba8",
+  selected: "#313244",
+} as const

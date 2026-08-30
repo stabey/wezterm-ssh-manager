@@ -1,0 +1,4 @@
+preload = ["@opentui/solid/preload"]
+
+[install]
+registry = "https://registry.npmjs.org"
