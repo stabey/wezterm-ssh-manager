@@ -1,14 +1,14 @@
 # Rebuilding and Relinking the Standalone TUI
 
-This document applies to version 1.0.0. It records how to reproduce the
-application bundle and how to rebuild the Bun runtime with modified
-LGPL-covered components before embedding that runtime in the application.
+This document covers two artifact families: the native Rust and Ratatui TUI
+in the current, unreleased source tree, and the legacy OpenTUI/Bun standalone
+executables released as version 1.0.0. The Bun sections also record how to
+rebuild that runtime with modified LGPL-covered components before embedding
+it in the legacy application.
 
 ## Identify the exact application source
 
-Official release artifacts include `BUILD-METADATA.json`. Its
-`sourceCommit` field is the Git commit that produced that artifact. Obtain the
-matching source from:
+Obtain matching source from:
 
 ```text
 https://github.com/stabey/wezterm-ssh-manager
@@ -16,10 +16,78 @@ https://github.com/stabey/wezterm-ssh-manager
 
 Check out that commit, not merely the moving default branch. A source archive
 for a release tag can also be used if it resolves to the same commit. All
-application Lua, TypeScript, TSX, Python, PowerShell, tests, build scripts, and
-configuration needed for the project are in that source tree.
+application Rust, Lua, TypeScript, TSX, Python, PowerShell, tests, build
+scripts, and configuration needed for the project are in that source tree.
 
-## Reproduce the ordinary application build
+Legacy OpenTUI release packages include `BUILD-METADATA.json`; its
+`sourceCommit` field identifies their source commit. Native Rust Actions
+artifacts are associated with the commit recorded by the workflow run, while
+published artifacts must be built from the commit resolved by their release
+tag. `SHA256SUMS` verifies downloaded bytes but does not replace that source
+provenance.
+
+## Rebuild the native Rust release artifacts
+
+The Rust package declares Rust 1.88 as its minimum supported compiler and uses
+the 2024 edition. Install a Rust 1.88-or-newer toolchain for the target host.
+The official workflow currently uses the latest stable toolchain available to
+each runner, so record the exact `rustc -Vv`, Cargo, linker, and runner image
+when byte-for-byte reproducibility matters.
+
+Run the following checks and build from the repository root, substituting one
+of the release target triples listed below:
+
+```sh
+cd tui-rust
+rustup target add TARGET_TRIPLE
+cargo fmt --all -- --check
+cargo clippy --locked --all-targets --target TARGET_TRIPLE -- -D warnings
+cargo test --locked --target TARGET_TRIPLE
+cargo build --locked --release --target TARGET_TRIPLE
+```
+
+The supported release targets and staged executable names are:
+
+| Runner | Target triple | Cargo output | Release name |
+| --- | --- | --- | --- |
+| macOS arm64 | `aarch64-apple-darwin` | `sshmgr-tui` | `sshmgr-tui-macos-arm64` |
+| macOS Intel | `x86_64-apple-darwin` | `sshmgr-tui` | `sshmgr-tui-macos-x64` |
+| Windows x64 | `x86_64-pc-windows-msvc` | `sshmgr-tui.exe` | `sshmgr-tui-windows-x64.exe` |
+
+The executable is written below
+`tui-rust/target/TARGET_TRIPLE/release/`. Build the macOS artifacts on their
+matching macOS architectures and the MSVC artifact on Windows so that the
+host linker, system libraries, and smoke tests match the release workflow.
+`Cargo.lock` fixes registry package versions and checksums; `--locked` makes
+the build fail instead of silently updating that dependency graph.
+
+Create the distributable with the checked-in packager, substituting the Cargo
+output, platform label, and target triple for the current runner:
+
+```sh
+python3 scripts/package.py \
+  --binary target/TARGET_TRIPLE/release/sshmgr-tui \
+  --platform PLATFORM \
+  --target TARGET_TRIPLE
+```
+
+On Windows use `python` and the `.exe` binary path. The packager adds the
+project's `LICENSE`, this `THIRD_PARTY_NOTICES.md`, `REBUILDING.md`, `Cargo.lock`,
+build metadata, Rust toolchain notices, and version-qualified dependency
+license files. It fails rather than silently omitting an unsupported missing
+license. The release archive names are versioned from `Cargo.toml`:
+
+```text
+sshmgr-tui-<version>-macos-arm64.tar.gz
+sshmgr-tui-<version>-macos-x64.tar.gz
+sshmgr-tui-<version>-windows-x64.zip
+```
+
+The release job publishes the three archives and a `SHA256SUMS` covering them.
+A release tag must be `v` followed by the package version in
+`tui-rust/Cargo.toml`; never move an existing release tag to a different commit.
+
+## Reproduce the legacy OpenTUI/Bun application build
 
 Install Bun 1.3.13 and run from the repository root:
 

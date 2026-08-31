@@ -12,6 +12,8 @@ venv/
 tui-opentui/node_modules/
 tui-opentui/dist/
 tui-opentui/.*.bun-build
+tui-rust/target/
+tui-rust/dist/
 
 # Local environment and secrets
 .env

@@ -1,4 +1,4 @@
--- sshmgr.tui -- spawn the OpenTUI/Textual manager tab and dispatch OSC commands
+-- sshmgr.tui -- spawn the Rust/OpenTUI/Textual manager tab and dispatch OSC commands
 local wezterm = require 'wezterm'
 local util = require 'sshmgr.util'
 local panel = require 'sshmgr.panel'
@@ -260,6 +260,12 @@ function M.opentui_dir(state)
   return root and (root .. util.sep .. 'tui-opentui') or nil
 end
 
+function M.rust_tui_dir(state)
+  local plugin_dir = M.plugin_dir(state)
+  local root = plugin_dir and dir_of(plugin_dir) or nil
+  return root and (root .. util.sep .. 'tui-rust') or nil
+end
+
 local function tui_exists(state)
   local dir = M.tui_dir(state)
   if not dir then
@@ -332,6 +338,95 @@ local function python_exists_without_textual(cfg)
     end
   end
   return nil
+end
+
+local function native_backend(name)
+  return name == 'rust' or name == 'opentui'
+end
+
+local function rust_command(state, cfg)
+  local tui_cfg = (cfg.ui and cfg.ui.tui) or {}
+  if tui_cfg.command ~= nil then
+    local command, err = copy_argv(tui_cfg.command)
+    if not command then
+      return nil, err
+    end
+    local cwd = tui_cfg.cwd and util.expand_path(tui_cfg.cwd)
+      or dir_of(M.plugin_dir(state))
+      or M.rust_tui_dir(state)
+    return {
+      name = 'rust',
+      command = command,
+      cwd = cwd,
+      process_names = { basename(command[1]):lower() },
+    }
+  end
+
+  local root = M.rust_tui_dir(state)
+  if not root then
+    return nil, 'cannot locate tui-rust'
+  end
+
+  local target_triple = tostring(wezterm.target_triple or '')
+  local asset_name, cargo_name
+  if util.is_windows then
+    asset_name = 'sshmgr-tui-windows-x64.exe'
+    cargo_name = 'sshmgr-tui.exe'
+    if target_triple == '' then
+      target_triple = 'x86_64-pc-windows-msvc'
+    end
+  elseif target_triple:find('darwin', 1, true)
+    and target_triple:find('aarch64', 1, true)
+  then
+    asset_name = 'sshmgr-tui-macos-arm64'
+    cargo_name = 'sshmgr-tui'
+    if target_triple == '' then
+      target_triple = 'aarch64-apple-darwin'
+    end
+  elseif target_triple:find('darwin', 1, true) then
+    asset_name = 'sshmgr-tui-macos-x64'
+    cargo_name = 'sshmgr-tui'
+    if target_triple == '' then
+      target_triple = 'x86_64-apple-darwin'
+    end
+  else
+    asset_name = util.is_windows and 'sshmgr-tui.exe' or 'sshmgr-tui'
+    cargo_name = asset_name
+  end
+
+  local candidates = {
+    { 'dist', asset_name },
+    { 'dist', cargo_name },
+    { 'bin', asset_name },
+    { 'bin', cargo_name },
+    { asset_name },
+  }
+  if target_triple ~= '' then
+    table.insert(candidates, { 'target', target_triple, 'release', cargo_name })
+  end
+  table.insert(candidates, { 'target', 'release', cargo_name })
+
+  for _, rel in ipairs(candidates) do
+    local path = root
+    for _, part in ipairs(rel) do
+      path = path .. util.sep .. part
+    end
+    if util.file_exists(path) then
+      return {
+        name = 'rust',
+        command = { path },
+        cwd = root,
+        process_names = {
+          asset_name:lower(),
+          cargo_name:lower(),
+          'sshmgr-tui',
+          'sshmgr-tui.exe',
+        },
+      }
+    end
+  end
+
+  return nil, 'tui-rust has no release asset or cargo --release binary'
 end
 
 local function opentui_command(state, cfg)
@@ -459,12 +554,27 @@ end
 local function backend_candidates(state, cfg)
   local tui_cfg = (cfg.ui and cfg.ui.tui) or {}
   local requested = tostring(tui_cfg.backend or 'auto'):lower()
-  if requested ~= 'auto' and requested ~= 'opentui' and requested ~= 'textual' then
-    return nil, 'ui.tui.backend must be auto, opentui or textual'
+  if requested ~= 'auto'
+    and requested ~= 'rust'
+    and requested ~= 'opentui'
+    and requested ~= 'textual'
+  then
+    return nil, 'ui.tui.backend must be auto, rust, opentui or textual'
   end
 
   local out, errors = {}, {}
-  if requested == 'auto' or requested == 'opentui' then
+  if requested == 'auto' or requested == 'rust' then
+    local backend, err = rust_command(state, cfg)
+    if backend then
+      table.insert(out, backend)
+    else
+      table.insert(errors, 'Rust TUI: ' .. tostring(err))
+    end
+  end
+  -- A custom argv is a single native backend override. In `auto` it is
+  -- classified as Rust-compatible because both native implementations share
+  -- the same helper protocol; do not enqueue the identical command twice.
+  if requested == 'opentui' or (requested == 'auto' and tui_cfg.command == nil) then
     local backend, err = opentui_command(state, cfg)
     if backend then
       table.insert(out, backend)
@@ -500,7 +610,7 @@ print(json.dumps({"runtime_dir": path, "token": secrets.token_hex(32)}), end="")
 
 local function create_runtime(backend)
   local cmd = {}
-  if backend.name == 'opentui' then
+  if native_backend(backend.name) then
     util.tbl_concat_into(cmd, backend.command)
     table.insert(cmd, '--create-runtime')
   else
@@ -565,7 +675,7 @@ local function discard_runtime(ctx)
     return
   end
   local cmd = {}
-  if ctx.backend == 'opentui' and type(ctx.command) == 'table' then
+  if native_backend(ctx.backend) and type(ctx.command) == 'table' then
     util.tbl_concat_into(cmd, ctx.command)
     util.tbl_concat_into(cmd, { '--cleanup-runtime', ctx.runtime_dir })
   else
@@ -627,7 +737,7 @@ local function atomic_snapshot(ctx, body)
   end
 
   local moved, merr = os.rename(tmp, ctx.snapshot_path)
-  if not moved and ctx.backend == 'opentui' and type(ctx.command) == 'table' then
+  if not moved and native_backend(ctx.backend) and type(ctx.command) == 'table' then
     local cmd = {}
     util.tbl_concat_into(cmd, ctx.command)
     util.tbl_concat_into(cmd, { '--replace-file', tmp, ctx.snapshot_path })
@@ -668,7 +778,7 @@ local function snapshot_json(state)
     local o = p.options or {}
     local stored = in_store[key]
     -- Every source gets a normalised, password-free connection view. Imported
-    -- and inline profiles do not have `raw`, but the OpenTUI SFTP client still
+    -- and inline profiles do not have `raw`, but the native TUI SFTP client still
     -- needs their resolved key paths, jump host and timeout settings.
     local resolved_agent = o.identityAgent or (p.env and p.env.SSH_AUTH_SOCK)
     if not resolved_agent and (o.auth == nil or o.auth == '' or o.auth == 'agent') then
@@ -681,14 +791,18 @@ local function snapshot_json(state)
       auth = o.auth,
       privateKeys = util.deep_copy(o.privateKeys or {}),
       password_env = o.password_env,
+      -- Only the presence is relevant to the native client: it never executes
+      -- password commands, and the command itself may contain sensitive argv.
+      password_cmd = o.password_cmd ~= nil and true or nil,
       identityAgent = resolved_agent,
       jumpHost = o.jumpHost,
       proxyCommand = o.proxyCommand,
       readyTimeout = o.readyTimeout,
       keepaliveInterval = o.keepaliveInterval,
       keepaliveCountMax = o.keepaliveCountMax,
+      algorithms = util.deep_copy(o.algorithms),
       host_key_policy = p.host_key_policy or cfg.host_key_policy,
-      ssh_options = util.deep_copy(p.ssh_options or {}),
+      ssh_options = next(p.ssh_options or {}) and util.deep_copy(p.ssh_options) or nil,
     }
     local entry = {
       id = p.id,

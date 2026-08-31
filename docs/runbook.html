@@ -465,11 +465,11 @@
     <h1>wezterm-ssh-manager 历史更新与验收</h1>
     <p class="standfirst">
       这份手册的 Step 1–7 是算法过滤、凭据管理器和 Tabby 转换的历史回归流程；
-      Step 8 已补充 v1.0.0 的 OpenTUI/SFTP 实机验收。
+      Step 8 已补充 main 分支 Rust TUI/SFTP 的实机验收。
     </p>
 
     <dl class="facts">
-      <div class="fact"><dt>验收范围</dt><dd>v1.0.0 公开发布基线</dd></div>
+      <div class="fact"><dt>验收范围</dt><dd>v1.0.0 历史基线 + main Rust TUI</dd></div>
       <div class="fact"><dt>公开安装源</dt><dd>https://github.com/stabey/wezterm-ssh-manager</dd></div>
       <div class="fact"><dt>插件 checkout</dt><dd>%APPDATA%\wezterm\plugins\</dd></div>
       <div class="fact"><dt>日志</dt><dd>%USERPROFILE%\.local\share\wezterm\</dd></div>
@@ -488,8 +488,8 @@
         但一行都没跑过。<strong>Step 5</strong> 就是专门验它的。</li>
       <li><strong>真实的 Windows ssh.exe</strong> —— 算法过滤是拿 macOS 的 OpenSSH 10.3 验的，
         你那边版本不同，能留下的算法会不一样（这是设计如此）。<strong>Step 4</strong> 验它。</li>
-      <li><strong>Windows 上的 OpenTUI 原生产物</strong> —— macOS 已完成真实 PTY、SSH Manager
-        和本机 sshd/SFTP 验证；Windows 仍需在 Windows runner 或实机验证 resize、中文宽度和键鼠。
+      <li><strong>Windows 上的 Rust TUI 原生产物</strong> —— CI 会在 macOS arm64/x64 和 Windows x64
+        分别构建；Windows 仍需在真实 WezTerm 中验证 resize、中文宽度、键鼠和 SFTP。
         <strong>Step 8</strong> 验它。</li>
     </ul>
   </section>
@@ -851,9 +851,10 @@ Test-Path C:\Users\你\.config\wezterm\credman.ps1</pre>
       <h3>TUI 管理</h3>
       <p>还在 Manager tab 里走一遍：<code>n</code> 新建 → <code>e</code> 改几个常用字段 → <code>d</code> 删掉。
         再按一次 <code>Ctrl+Shift+S</code> 应切回同一个 tab，不要再开一个。</p>
-      <p>默认后端是 OpenTUI。仓库里有本平台的 <code>tui-opentui/dist/sshmgr-tui-*</code>
-        时优先使用单文件程序；否则尝试 Bun 源码，最后才回退 Python Textual。OpenTUI 的编辑表单
-        目前只显示名称、分组、目标、认证和跳板机等常用字段，未显示的高级字段会原样保留。</p>
+      <p>默认后端是 Rust TUI。仓库里有本平台的 <code>tui-rust/dist/sshmgr-tui-*</code> Actions/Release
+        产物或 <code>tui-rust/target/release/sshmgr-tui[.exe]</code> 本机构建时优先使用；否则依次
+        回退 OpenTUI/Bun 和 Python Textual。编辑表单目前只显示名称、分组、目标、认证和跳板机等
+        常用字段，未显示的高级字段会原样保留。</p>
 
       <h3>SFTP 双栏</h3>
       <p>在 Manager 选中主机后按 <code>s</code>，确认左侧本地目录、右侧远端目录能读取。
@@ -943,7 +944,7 @@ Test-Path C:\Users\你\.config\wezterm\credman.ps1</pre>
           <span class="where">Step 8 · 未验证交互</span></span></label>
 
       <label class="check"><input type="checkbox" data-k="a14">
-        <span class="check-body">OpenTUI SFTP 能浏览、上传、下载、改名和删除普通文件
+        <span class="check-body">Rust TUI SFTP 能浏览、上传、下载、改名和删除普通文件
           <span class="where">Step 8 · Windows 实机</span></span></label>
     </div>
   </section>
@@ -959,13 +960,13 @@ Test-Path C:\Users\你\.config\wezterm\credman.ps1</pre>
         </thead>
         <tbody>
           <tr>
-            <td>Ctrl+Shift+S 提示 OpenTUI、Bun 和 Textual 都不可用</td>
-            <td>没有本平台编译产物，也找不到 Bun；Python 回退同样不可用</td>
-            <td>在 <code>tui-opentui</code> 运行 <code>bun install &amp;&amp; bun run build</code>；或安装 Textual 回退</td>
+            <td>Ctrl+Shift+S 提示 Rust、OpenTUI、Bun 和 Textual 都不可用</td>
+            <td>没有 Rust 本平台编译产物，也找不到 Bun；Python 回退同样不可用</td>
+            <td>在 <code>tui-rust</code> 运行 <code>cargo build --locked --release</code>；或下载 Actions/Release 产物到 <code>tui-rust/dist</code></td>
           </tr>
           <tr>
             <td>每次快捷键都新开一个 Manager tab</td>
-            <td>标题对不上，或 OpenTUI/Bun/Python 进程已经退出</td>
+            <td>标题对不上，或 Rust/OpenTUI/Bun/Python 进程已经退出</td>
             <td>关掉多余 tab 再按一次；看 tab 标题是不是 <code>SSH Manager</code></td>
           </tr>
           <tr>
@@ -1042,7 +1043,7 @@ git -C "$env:USERPROFILE\src\wezterm-ssh-manager" checkout v1.0.0
   </section>
 
   <footer>
-    wezterm-ssh-manager · v1.0.0 · github.com/stabey/wezterm-ssh-manager
+    wezterm-ssh-manager · v1.0.0 → main Rust TUI · github.com/stabey/wezterm-ssh-manager
   </footer>
 
 </div>

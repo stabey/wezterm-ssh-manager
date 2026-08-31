@@ -1,13 +1,53 @@
 # Third-Party Notices
 
-This file applies to the version 1.0.0 source distribution and to the
-`sshmgr-tui` standalone executables built from it. The project itself is
-licensed under the MIT License; see `LICENSE`.
+This file applies to the current source distribution and to both families of
+`sshmgr-tui` standalone artifacts: the native Rust and Ratatui artifacts in
+the current, unreleased source tree, and the legacy OpenTUI/Bun artifacts
+released as version 1.0.0. This scope statement does not designate a new
+release version. The project itself is licensed under the MIT License; see
+`LICENSE`.
 
-The standalone executable embeds the application bundle, platform-native
-OpenTUI code, and the Bun runtime. The original license texts described below
-are shipped in `tui-opentui/licenses/` in source distributions and in
-`licenses/` beside every packaged executable.
+The native artifact contains the Rust standard library and Rust dependencies
+selected by `tui-rust/Cargo.lock`. Its release archive includes the project
+license and this notice beside `licenses/rust/` and `licenses/rust-toolchain/`
+directories. The first contains version-qualified, per-crate copies of upstream
+license files; the second preserves the license and copyright texts supplied by
+the exact Rust toolchain used for the build. If an upstream crate archive omits
+a license file but declares plain MIT, Apache-2.0, or their dual-license form,
+the packager copies the matching toolchain-supplied standard text and marks that
+fallback in `BUILD-METADATA.json`. Other missing or compound licenses fail the
+package step instead of being guessed. Original package notices, attributions,
+and exceptions are always kept separately when present.
+
+The Rust license inventory is generated from the exact lock file and target
+triple used for each artifact. It must be regenerated and reviewed whenever
+`Cargo.lock` changes, including changes to target-specific, build-time, or
+transitive packages. The archive's per-crate files and build metadata are the
+controlling inventory for a particular Rust build; the dependency names in
+this document are descriptive, not a substitute for those texts.
+
+The legacy standalone executable embeds the JavaScript application bundle,
+platform-native OpenTUI code, and the Bun runtime. The original license texts
+described in the legacy sections below are shipped in
+`tui-opentui/licenses/` in source distributions and in `licenses/` beside
+every packaged legacy executable.
+
+## Native Rust and Ratatui artifacts
+
+The native manager and two-pane SFTP client are built from the direct and
+transitive crates locked in `tui-rust/Cargo.lock`. The principal runtime
+components include Ratatui and Crossterm for the terminal interface, Tokio for
+asynchronous execution, and Russh plus Russh SFTP and their cryptographic
+dependencies for SSH/SFTP. Exact versions, registry sources, checksums, and
+the complete dependency graph are recorded in the lock file.
+
+Rust packages commonly use dual or compound licenses, and some cryptographic
+or platform crates preserve additional third-party notices. Consult each
+version-qualified file under `licenses/rust/` and comply with every applicable
+choice, notice, attribution, and redistribution term. The packager traverses
+the target-filtered non-development dependency graph: normal, transitive,
+build-time, and target-specific packages are included, while dependencies used
+only by tests or other development targets are omitted from release archives.
 
 ## JavaScript packages in the application bundle
 

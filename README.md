@@ -3,17 +3,18 @@
 给 WezTerm（Windows / macOS / Linux）的 SSH 连接管理插件，配置模型对齐 [Tabby](https://github.com/Eugeny/tabby) 的 SSH Profile，
 **包含登录后自动执行命令（Tabby 的 Login scripts）**。
 
-当前公开版：**v1.0.0**。
+当前正式 Release：**v1.0.0（OpenTUI 版）**；`main` 分支已切换为计划中的 v1.1.0 Rust TUI，
+当前三平台构建见 [GitHub Actions](https://github.com/stabey/wezterm-ssh-manager/actions/workflows/opentui.yml)。
 
 这是社区维护项目，与 WezTerm 或 Tabby 官方无隶属关系。
 
 连接本身是纯 Lua + 系统自带的 OpenSSH 客户端
 （Windows 10/11 自带 `C:\Windows\System32\OpenSSH\ssh.exe`）。
-管理界面默认使用 OpenTUI + Solid，SSH Manager 和双栏 SFTP 在同一个常驻 tab 中；
-旧的 Python Textual 界面保留为自动回退（见下面「TUI 依赖」）。
+管理界面默认使用 Rust + Ratatui，SSH Manager 和双栏 SFTP 在同一个常驻 tab 中；
+原有 OpenTUI + Solid 与 Python Textual 界面保留为自动回退（见下面「TUI 依赖」）。
 
 > 📋 [`docs/runbook.html`](docs/runbook.html) 是原有 Windows/Tabby 迁移的历史验收手册；
-> 其中 Step 8 已补上当前 OpenTUI 与 SFTP 的 Windows 实机检查项。
+> 其中 Step 8 已补上当前 Rust TUI 与 SFTP 的 Windows 实机检查项。
 
 ```
 Ctrl+Shift+S            SSH Manager TUI（分组 / 编辑）
@@ -127,8 +128,9 @@ local sshmgr = require 'init'
 `plugin/init.lua` 丢成 `~/.config/wezterm/sshmgr_init.lua` 也能直接 `require`。
 
 只复制 `plugin/` 时，纯 Lua 的连接功能和 `Ctrl+Shift+E` 连接选择器仍可用，但
-`Ctrl+Shift+S` Manager 会提示缺少 TUI 后端。要使用 OpenTUI 管理器和 SFTP，必须同时保留仓库根目录的
-`tui-opentui/`；要保留 Python 回退，再一并保留 `tui/`（推荐直接安装完整仓库）。
+`Ctrl+Shift+S` Manager 会提示缺少 TUI 后端。默认 Rust 管理器和 SFTP 需要仓库根目录的
+`tui-rust/` 以及本平台编译产物；OpenTUI、Python 回退分别位于 `tui-opentui/`、`tui/`
+（推荐直接安装完整仓库）。
 
 使用公开 URL 或 `file://` 时，WezTerm 会 clone 到
 `%APPDATA%\wezterm\plugins\<编码后的URL>\`（Windows）、
@@ -138,72 +140,83 @@ local sshmgr = require 'init'
 
 ### TUI 依赖
 
-SSH Manager 默认是常驻 tab 里的 [OpenTUI](https://opentui.com/) + Solid 应用，支持
+SSH Manager 默认是常驻 tab 里的 Rust + [Ratatui](https://ratatui.rs/) 应用，支持
 macOS arm64/x64 和 Windows x64。普通 SSH 连接、密码保存和登录脚本仍由 Lua 插件执行；
-SFTP 会在 TUI 进程中另建一条 SSH2 会话。
+SFTP 会在原生 TUI 进程中另建一条 SSH 会话。
 
 `wezterm.plugin.require` 只 clone 仓库源码，不会自动下载 GitHub Release 附件。Manager/SFTP
-要可用，需要下面三种后端之一：Release 预编译程序、Bun 源码环境，或 Python Textual 回退。
+要可用，需要下面四种后端之一：Rust 预编译程序、本地 Rust 构建、OpenTUI/Bun，或
+Python Textual 回退。
 
-#### 使用 Release 预编译程序（不用安装 Bun）
+#### 使用 Rust 预编译程序
 
-从 [v1.0.0 Release](https://github.com/stabey/wezterm-ssh-manager/releases/tag/v1.0.0)
-下载与你的平台对应的归档，并用同页的 `SHA256SUMS` 校验：
+`main` 每次相关提交都会在 [Rust TUI workflow](https://github.com/stabey/wezterm-ssh-manager/actions/workflows/opentui.yml)
+生成以下 Actions artifact；后续 `v*` tag 会把同样的归档和 `SHA256SUMS` 发布到 Release：
 
-- Apple Silicon：`sshmgr-tui-1.0.0-macos-arm64.tar.gz`
-- Intel Mac：`sshmgr-tui-1.0.0-macos-x64.tar.gz`
-- Windows x64：`sshmgr-tui-1.0.0-windows-x64.zip`
+- Apple Silicon：`sshmgr-tui-<版本>-macos-arm64.tar.gz`
+- Intel Mac：`sshmgr-tui-<版本>-macos-x64.tar.gz`
+- Windows x64：`sshmgr-tui-<版本>-windows-x64.zip`
 
-解压后，把其中的 `sshmgr-tui-*` 可执行文件复制到当前插件 checkout 的
-`tui-opentui/dist/`，保持原文件名；macOS 上还要保留可执行位。公开 URL 安装可在 WezTerm
+Actions 下载得到的外层 artifact 还要再解压一次。然后把归档目录中的
+`sshmgr-tui-macos-arm64`、`sshmgr-tui-macos-x64` 或 `sshmgr-tui-windows-x64.exe`
+复制到当前插件 checkout 的 `tui-rust/dist/`，保持原文件名；macOS 上还要保留可执行位。
+公开 URL 安装可在 WezTerm
 debug overlay 运行 `wezterm.plugin.list()` 找到这个 checkout 的 `plugin_dir`；本地 clone
 则直接使用仓库目录。重载配置后，Lua 会优先找到这个预编译程序。
+
+现有 [v1.0.0 Release](https://github.com/stabey/wezterm-ssh-manager/releases/tag/v1.0.0)
+是上一代 OpenTUI 构建，不是 Rust 构建；它仍可放进 `tui-opentui/dist/` 作为回退。
 
 这些社区构建尚未做 Apple/Windows 代码签名。系统若阻止首次运行，请先核对校验和，再通过
 系统安全界面允许该程序；不希望运行未签名二进制时，请按下节从源码构建。
 
-源码运行需要 Bun 1.3 或更新版本：
+从源码构建 Rust TUI 需要 Rust 1.88 或更新版本：
+
+```bash
+cd tui-rust
+cargo test --locked
+cargo build --locked --release
+```
+
+本机构建会生成 `tui-rust/target/release/sshmgr-tui[.exe]`，Lua 可以直接发现，无需改名。
+Lua 的 `auto` 顺序是 Rust 预编译程序/本机构建、OpenTUI 编译产物或 Bun 源码、Python Textual。
+也可以显式指定后端或一个不经过 shell 的 argv：
+
+```lua
+sshmgr.apply_to_config(config, {
+  ui = { tui = {
+    backend = 'auto', -- 'auto' | 'rust' | 'opentui' | 'textual'
+    -- command = { 'C:/tools/sshmgr-tui-windows-x64.exe' },
+    -- cwd = 'C:/tools',
+    -- bun = 'C:/Users/me/.bun/bin/bun.exe',
+  } },
+})
+```
+
+仓库内的 `.github/workflows/opentui.yml`（保留旧文件名）会在 macOS arm64、macOS Intel
+和 Windows x64 分别执行格式检查、Clippy、测试、release 构建和 helper 协议冒烟测试，
+上传包含项目声明、锁文件和逐 crate 许可证的 `tar.gz` / `zip`。推送 `v*` tag 时还会创建
+带 `SHA256SUMS` 的 GitHub Release。Windows 的最终键鼠、resize 和中文宽度仍需 WezTerm 实机确认。
+
+Rust 不可用时，`auto` 会继续尝试原有 OpenTUI。需要从源码运行 OpenTUI 时：
 
 ```bash
 cd tui-opentui
 bun install
 bun run typecheck
 bun test
-bun run build     # 生成当前平台的单文件程序
+bun run build
 ```
 
-`dist/` 不提交到 git；新 clone 至少要先执行一次 `bun install`，推荐再执行 `bun run build`。
-Linux 仍可尝试 Bun 源码入口，或使用 Textual 回退；当前单文件构建脚本只声明 macOS/Windows。
-
-Lua 会依次尝试 `tui-opentui/dist/sshmgr-tui-*`、Bun 源码入口、Python Textual。
-也可以显式指定后端或一个不经过 shell 的 argv：
-
-```lua
-sshmgr.apply_to_config(config, {
-  ui = { tui = {
-    backend = 'auto', -- 'auto' | 'opentui' | 'textual'
-    -- command = { 'bun', 'run', 'C:/dev/wezterm-ssh-manager/tui-opentui/src/index.tsx' },
-    -- cwd = 'C:/dev/wezterm-ssh-manager/tui-opentui',
-    -- bun = 'C:/Users/me/.bun/bin/bun.exe',
-  } },
-})
-```
-
-macOS 和 Windows 的 OpenTUI 原生包不同，发布时应分别在各平台运行 `bun install &&
-bun run build`。仓库内的 `.github/workflows/opentui.yml` 会在 macOS arm64、macOS x64 和
-Windows x64 上执行类型检查、测试、构建及 helper 冒烟测试；`main`、版本 tag 和手动运行会
-上传带许可证的 macOS `tar.gz` / Windows `zip`。推送 `v*` tag 还会自动创建带
-`SHA256SUMS` 的 GitHub Release。Windows 的最终键鼠、resize 和中文宽度仍需 WezTerm 实机确认。
-
-如果 OpenTUI 和 Bun 都不可用，`auto` 会尝试旧的 Python Textual 界面：
-
-TUI 与 Lua 之间的命令使用每个 Manager pane 独立的短期会话：OSC UserVar 只携带
-一次性请求引用并会立即清空，密码等命令内容保存在临时目录中，由 Lua 读取后立即删除。
-macOS/Linux 会主动收紧目录权限；Windows 依赖当前 `%TEMP%` 的继承 ACL。
+OpenTUI 和 Bun 也不可用时，`auto` 最后尝试旧的 Python Textual 界面：
 
 ```bash
 python -m pip install textual==8.2.8
 ```
+
+TUI 与 Lua 之间的命令使用每个 Manager pane 独立的短期会话：OSC UserVar 只携带
+一次性请求引用并会立即清空，密码等命令内容保存在临时目录中，由 Lua 读取后立即删除。
+macOS/Linux 会主动收紧目录权限；Windows 依赖当前 `%TEMP%` 的继承 ACL。
 
 指定 Textual 的解释器：
 
@@ -248,9 +261,9 @@ SFTP 当前支持密码、`password_env`、多把未加密私钥、OpenSSH Agent
 改名和递归删除。
 
 首版 SFTP 尚未接入 `known_hosts`/host key 校验，也会忽略自定义 algorithms 和任意
-`ssh_options`（界面会给 warning）；加密私钥没有 passphrase 输入框。OpenTUI 0.5.9 的
-`input` 也没有密码遮罩，所以密码会在当前终端输入框里显示。这个边界适合个人环境，
-不应当作面向多用户的安全 SFTP 客户端。
+`ssh_options`（界面会给 warning）；加密私钥没有 passphrase 输入框。若手动强制使用
+OpenTUI 0.5.9 回退，它的 `input` 没有密码遮罩，密码会在当前终端输入框里显示。
+这个边界适合个人环境，不应当作面向多用户的安全 SFTP 客户端。
 
 ## 2. 最小配置
 
@@ -726,8 +739,8 @@ sshmgr.apply_to_config(config, {
     launch_menu = false,
     notify = true,
     tui = {
-      backend = 'auto',            -- OpenTUI 优先，失败回退 Textual
-      command = nil,               -- 可选 OpenTUI argv；不会经过 shell
+      backend = 'auto',            -- Rust 优先，失败回退 OpenTUI / Textual
+      command = nil,               -- 可选自定义 TUI argv；不会经过 shell
       cwd = nil,                   -- 自定义 command 的工作目录
       bun = nil,                   -- Bun 路径；默认 'bun'
       python = nil,                -- Textual 回退的 Python 路径

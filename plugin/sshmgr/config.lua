@@ -127,16 +127,16 @@ M.defaults = {
     notify = true,
     -- Persistent manager tab (Ctrl+Shift+S).
     tui = {
-      -- 'auto' prefers the bundled OpenTUI implementation and falls back to
-      -- Textual. Use 'opentui' or 'textual' to force one backend.
+      -- 'auto' prefers the bundled Rust implementation, then falls back to
+      -- OpenTUI and Textual. Use 'rust', 'opentui' or 'textual' to force one.
       backend = 'auto',
-      -- Optional argv prefix for OpenTUI, for example
-      -- { 'bun', 'run', 'C:/dev/wezterm-ssh-manager/tui-opentui/src/index.tsx' }.
+      -- Optional argv prefix for a custom manager, for example
+      -- { 'C:/tools/sshmgr-tui-windows-x64.exe' }.
       -- The launcher appends `--snapshot <path>` and never invokes a shell.
       -- The same command must implement `--create-runtime`,
       -- `--cleanup-runtime <dir>` and `--replace-file <from> <to>`.
       command = nil,
-      -- Optional working directory for a custom OpenTUI command.
+      -- Optional working directory for a custom manager command.
       cwd = nil,
       bun = nil, -- explicit Bun executable used for bundled TypeScript source
       python = nil, -- explicit interpreter, e.g. [[C:/Python314/python.exe]]

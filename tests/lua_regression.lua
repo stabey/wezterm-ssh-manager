@@ -59,14 +59,19 @@ local ok, why = xpcall(function()
   eq(type(tui.on_user_var), 'function', 'TUI bridge loads')
 
   local default_tui = configmod.build({}).ui.tui
-  eq(default_tui.backend, 'auto', 'OpenTUI auto backend default')
-  eq(default_tui.command, nil, 'OpenTUI command default')
+  eq(default_tui.backend, 'auto', 'Rust-first auto backend default')
+  eq(default_tui.command, nil, 'TUI command default')
+  eq(
+    tui.rust_tui_dir({ plugin_dir = '.' .. util.sep .. 'plugin' }),
+    '.' .. util.sep .. 'tui-rust',
+    'Rust TUI directory'
+  )
 
-  local custom_command = { 'bun', 'run', 'custom manager.tsx' }
+  local custom_command = { 'custom manager.exe', '--native' }
   local custom_cfg = cfg {
     ui = {
       tui = {
-        backend = 'opentui',
+        backend = 'rust',
         command = custom_command,
         cwd = '.',
       },
@@ -74,11 +79,43 @@ local ok, why = xpcall(function()
   }
   local backends, backend_error = tui._backend_candidates({ plugin_dir = './plugin' }, custom_cfg)
   assert(backends, backend_error)
-  eq(#backends, 1, 'explicit OpenTUI backend count')
-  eq(backends[1].name, 'opentui', 'explicit OpenTUI backend selected')
-  eq(backends[1].command[3], 'custom manager.tsx', 'OpenTUI argv preserves spaces')
+  eq(#backends, 1, 'explicit Rust backend count')
+  eq(backends[1].name, 'rust', 'explicit Rust backend selected')
+  eq(backends[1].command[1], 'custom manager.exe', 'Rust argv preserves spaces')
   custom_command[1] = 'changed-after-resolution'
-  eq(backends[1].command[1], 'bun', 'OpenTUI argv is copied')
+  eq(backends[1].command[1], 'custom manager.exe', 'Rust argv is copied')
+
+  local auto_backends, auto_backend_error = tui._backend_candidates(
+    { plugin_dir = './missing/plugin' },
+    cfg { ui = { tui = { backend = 'auto', command = { 'custom manager.exe' } } } }
+  )
+  assert(auto_backends, auto_backend_error)
+  eq(#auto_backends, 1, 'auto custom native backend is not duplicated')
+  eq(auto_backends[1].name, 'rust', 'auto custom native backend is Rust-compatible')
+
+  local opentui_backends, opentui_backend_error = tui._backend_candidates(
+    { plugin_dir = './missing/plugin' },
+    cfg { ui = { tui = { backend = 'opentui', command = { 'bun', 'manager.tsx' } } } }
+  )
+  assert(opentui_backends, opentui_backend_error)
+  eq(#opentui_backends, 1, 'explicit OpenTUI custom backend count')
+  eq(opentui_backends[1].name, 'opentui', 'explicit OpenTUI custom backend retained')
+
+  if os.getenv 'SSHMGR_TEST_RUST_BINARY' == '1' then
+    local built_backends, built_backend_error = tui._backend_candidates(
+      { plugin_dir = '.' .. util.sep .. 'plugin' },
+      cfg { ui = { tui = { backend = 'rust' } } }
+    )
+    assert(built_backends, built_backend_error)
+    eq(#built_backends, 1, 'local Rust build backend count')
+    eq(built_backends[1].name, 'rust', 'local Rust build is discovered')
+    eq(
+      built_backends[1].command[1],
+      '.' .. util.sep .. 'tui-rust' .. util.sep .. 'target' .. util.sep .. 'release'
+        .. util.sep .. (util.is_windows and 'sshmgr-tui.exe' or 'sshmgr-tui'),
+      'local Rust release binary path'
+    )
+  end
   eq(tui._copy_argv('bun run app'), nil, 'shell command string is refused')
   eq(tui._copy_argv({ [1] = 'bun', [3] = 'app.tsx' }), nil, 'sparse argv is refused')
 
@@ -97,6 +134,7 @@ local ok, why = xpcall(function()
       password_env = 'SFTP_PASSWORD',
       jump_host = 'bastion',
       ready_timeout = 45000,
+      algorithms = { kex = { 'curve25519-sha256' } },
     },
   }, sftp_cfg)
   local password_sftp = profiles.normalize({
@@ -105,6 +143,7 @@ local ok, why = xpcall(function()
       host = 'ssh-alias',
       sftpHost = '192.0.2.44',
       auth = 'password',
+      password_cmd = 'literal-command-must-not-leak',
     },
   }, sftp_cfg)
   local snapshot_ctx = {
@@ -120,6 +159,7 @@ local ok, why = xpcall(function()
   }, snapshot_ctx))
   local snapshot_text = assert(util.read_file(snapshot_path))
   assert(not snapshot_text:find('literal-secret-must-not-leak', 1, true), 'snapshot leaked password')
+  assert(not snapshot_text:find('literal-command-must-not-leak', 1, true), 'snapshot leaked command')
   local snapshot = wezterm.serde.json_decode(snapshot_text)
   local snapshot_profile = assert(snapshot.profiles[1])
   eq(snapshot_profile.raw, nil, 'inline snapshot has no editable raw record')
@@ -129,10 +169,18 @@ local ok, why = xpcall(function()
   eq(snapshot_profile.sftp.identityAgent, 'profile-agent.sock', 'SFTP agent socket')
   eq(snapshot_profile.sftp.jumpHost, 'bastion', 'SFTP jump host alias')
   eq(snapshot_profile.sftp.readyTimeout, 45, 'SFTP ready timeout is seconds')
+  eq(
+    snapshot_profile.sftp.algorithms.kex[1],
+    'curve25519-sha256',
+    'SFTP reports ignored custom algorithms'
+  )
+  eq(snapshot_profile.sftp.ssh_options, nil, 'empty SSH options do not produce a warning')
   eq(snapshot_profile.sftp.password, nil, 'SFTP metadata has no plaintext password')
   local password_snapshot = assert(snapshot.profiles[2])
   eq(password_snapshot.sftp.host, '192.0.2.44', 'SFTP uses resolved SSH config hostname')
   eq(password_snapshot.sftp.identityAgent, nil, 'password auth does not inherit global agent')
+  eq(password_snapshot.sftp.password_cmd, true, 'SFTP reports password command without its argv')
+  eq(password_snapshot.sftp.ssh_options, nil, 'default SSH options stay absent')
 
   -- default_user is a Tabby compatibility setting, not a global SSH user.
   local c = cfg { default_user = 'deploy' }
