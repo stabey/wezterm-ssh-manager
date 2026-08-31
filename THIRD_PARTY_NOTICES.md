@@ -11,10 +11,12 @@ The native artifact contains the Rust standard library and Rust dependencies
 selected by `tui-rust/Cargo.lock`. Its release archive includes the project
 license and this notice beside `licenses/rust/` and `licenses/rust-toolchain/`
 directories. The first contains version-qualified, per-crate copies of upstream
-license files; the second preserves the license and copyright texts supplied by
-the exact Rust toolchain used for the build. If an upstream crate archive omits
+license files; the second preserves the Rust 1.98.0 license and generated
+standard-library copyright inventory checked into `tui-rust/licenses/`.
+Release packaging refuses a different compiler version so those notices and
+the built standard library cannot silently drift apart. If an upstream crate archive omits
 a license file but declares plain MIT, Apache-2.0, or their dual-license form,
-the packager copies the matching toolchain-supplied standard text and marks that
+the packager copies the matching version-pinned standard text and marks that
 fallback in `BUILD-METADATA.json`. Other missing or compound licenses fail the
 package step instead of being guessed. Original package notices, attributions,
 and exceptions are always kept separately when present.

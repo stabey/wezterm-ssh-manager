@@ -13,6 +13,9 @@ cargo test --locked
 cargo build --locked --release
 ```
 
+日常开发支持 Rust 1.88+；官方归档固定使用 Rust 1.98.0，以匹配仓库内保存的
+标准库许可证与版权清单。`scripts/package.py` 会拒绝用其它工具链制作发布归档。
+
 Lua 会自动查找 `target/release/sshmgr-tui[.exe]`。也可以从当前 main 分支的
 [GitHub Actions](https://github.com/stabey/wezterm-ssh-manager/actions/workflows/opentui.yml)
 或后续 GitHub Release 下载对应平台归档，把其中的可执行文件解压到本目录的 `dist/`：
@@ -47,10 +50,10 @@ sshmgr-tui --snapshot <runtime-dir>/snapshot.json
 `.github/workflows/opentui.yml`（为保留原工作流路径而沿用文件名）在三个本机
 runner 上构建并测试：
 
-- `aarch64-apple-darwin` → `sshmgr-tui-macos-arm64.tar.gz`
-- `x86_64-apple-darwin` → `sshmgr-tui-macos-x64.tar.gz`
-- `x86_64-pc-windows-msvc` → `sshmgr-tui-windows-x64.zip`
+- `aarch64-apple-darwin` → `sshmgr-tui-<版本>-macos-arm64.tar.gz`
+- `x86_64-apple-darwin` → `sshmgr-tui-<版本>-macos-x64.tar.gz`
+- `x86_64-pc-windows-msvc` → `sshmgr-tui-<版本>-windows-x64.zip`
 
 每个归档都包含本平台二进制、项目许可证、第三方声明、重建说明、`Cargo.lock`、
-构建元数据和由依赖锁文件生成的逐 crate 上游许可证。`main` 推送会把归档保留为
+构建元数据和由依赖锁文件生成的逐 crate 许可证清单。`main` 推送会把归档保留为
 Actions artifact；`v*` tag 会把三个归档和覆盖它们的 `SHA256SUMS` 上传到 GitHub Release。

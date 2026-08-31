@@ -82,7 +82,7 @@ pub fn resolve_path(path: impl AsRef<Path>) -> Result<PathBuf> {
 }
 
 fn create_private_directory(path: &Path) -> io::Result<()> {
-    let mut builder = DirBuilder::new();
+    let builder = &mut DirBuilder::new();
     #[cfg(unix)]
     {
         use std::os::unix::fs::DirBuilderExt;

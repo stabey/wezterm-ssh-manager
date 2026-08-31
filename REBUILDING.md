@@ -29,16 +29,18 @@ provenance.
 ## Rebuild the native Rust release artifacts
 
 The Rust package declares Rust 1.88 as its minimum supported compiler and uses
-the 2024 edition. Install a Rust 1.88-or-newer toolchain for the target host.
-The official workflow currently uses the latest stable toolchain available to
-each runner, so record the exact `rustc -Vv`, Cargo, linker, and runner image
-when byte-for-byte reproducibility matters.
+the 2024 edition. Normal development may use Rust 1.88 or newer, but official
+artifacts and the checked-in standard-library notice inventory are pinned to
+Rust 1.98.0. Install that exact toolchain to reproduce a distributable. Record
+the exact `rustc -Vv`, Cargo, linker, and runner image when byte-for-byte
+reproducibility matters.
 
 Run the following checks and build from the repository root, substituting one
 of the release target triples listed below:
 
 ```sh
 cd tui-rust
+rustup override set 1.98.0
 rustup target add TARGET_TRIPLE
 cargo fmt --all -- --check
 cargo clippy --locked --all-targets --target TARGET_TRIPLE -- -D warnings
@@ -73,9 +75,10 @@ python3 scripts/package.py \
 
 On Windows use `python` and the `.exe` binary path. The packager adds the
 project's `LICENSE`, this `THIRD_PARTY_NOTICES.md`, `REBUILDING.md`, `Cargo.lock`,
-build metadata, Rust toolchain notices, and version-qualified dependency
-license files. It fails rather than silently omitting an unsupported missing
-license. The release archive names are versioned from `Cargo.toml`:
+build metadata, the checked-in Rust 1.98.0 standard-library notices, and
+version-qualified dependency license files. It fails rather than silently
+omitting an unsupported missing license. The release archive names are
+versioned from `Cargo.toml`:
 
 ```text
 sshmgr-tui-<version>-macos-arm64.tar.gz

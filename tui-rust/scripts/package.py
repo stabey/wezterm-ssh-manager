@@ -16,6 +16,7 @@ from pathlib import Path
 
 NOTICE_PREFIXES = ("license", "copying", "notice", "unlicense")
 TOOLCHAIN_NOTICE_PREFIXES = NOTICE_PREFIXES + ("copyright",)
+PINNED_RUST_VERSION = "1.98.0"
 
 
 def run(command: list[str], cwd: Path) -> str:
@@ -78,17 +79,23 @@ def license_files(package: dict) -> list[Path]:
 
 
 def rust_toolchain_notices(tui_root: Path) -> tuple[list[Path], dict[str, Path]]:
-    sysroot = Path(run(["rustc", "--print", "sysroot"], tui_root)).resolve()
-    directories = (sysroot, sysroot / "share" / "doc" / "rust")
+    rustc_version = run(["rustc", "--version"], tui_root)
+    actual_version = rustc_version.split()[1] if len(rustc_version.split()) > 1 else ""
+    if actual_version != PINNED_RUST_VERSION:
+        raise RuntimeError(
+            f"release packaging requires rustc {PINNED_RUST_VERSION}; "
+            f"found {rustc_version}"
+        )
+
+    notice_dir = tui_root / "licenses" / f"rust-{PINNED_RUST_VERSION}"
+    if not notice_dir.is_dir():
+        raise RuntimeError(f"missing checked-in Rust notice directory: {notice_dir}")
     notices: dict[str, Path] = {}
-    for directory in directories:
-        if not directory.is_dir():
-            continue
-        for child in directory.iterdir():
-            if child.is_file() and child.name.lower().startswith(
-                TOOLCHAIN_NOTICE_PREFIXES
-            ):
-                notices.setdefault(child.name.lower(), child.resolve())
+    for child in notice_dir.iterdir():
+        if child.is_file() and child.name.lower().startswith(
+            TOOLCHAIN_NOTICE_PREFIXES
+        ):
+            notices.setdefault(child.name.lower(), child.resolve())
 
     templates: dict[str, Path] = {}
     for path in notices.values():
@@ -101,7 +108,7 @@ def rust_toolchain_notices(tui_root: Path) -> tuple[list[Path], dict[str, Path]]
     missing = sorted({"MIT", "Apache-2.0"} - templates.keys())
     if missing:
         raise RuntimeError(
-            f"Rust toolchain at {sysroot} does not provide license templates for: "
+            f"checked-in Rust {PINNED_RUST_VERSION} notices do not provide: "
             + ", ".join(missing)
         )
     return sorted(notices.values(), key=lambda path: path.name.lower()), templates
