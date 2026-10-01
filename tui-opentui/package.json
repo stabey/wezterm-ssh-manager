@@ -14,7 +14,7 @@
     "package": "bun run scripts/package.ts"
   },
   "dependencies": {
-    "@opentui/core": "0.5.9",
+    "@opentui/core": "0.5.12",
     "@opentui/solid": "0.5.9",
     "solid-js": "1.9.12",
     "ssh2": "1.17.0"
