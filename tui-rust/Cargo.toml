@@ -18,7 +18,7 @@ futures-util = "0.3.31"
 rand = "0.9.2"
 ratatui = { version = "0.30.2", default-features = false, features = ["crossterm_0_29", "layout-cache"] }
 russh = { version = "0.63.1", default-features = false, features = ["async-trait", "ring", "rsa"] }
-russh-sftp = "2.4.0"
+russh-sftp = "3.0.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.145", features = ["preserve_order"] }
 thiserror = "2.0.17"
